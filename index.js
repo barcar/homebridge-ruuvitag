@@ -1,6 +1,8 @@
 const ruuvi = require('node-ruuvitag');
 const io = require('socket.io-client');
+const mqtt = require('mqtt');
 var socket;
+var client;
 
 const debug = require('debug')('homebridge-ruuvitag');
 
@@ -27,6 +29,39 @@ class Ruuvitag {
     if (config.socket) {
       socket = io.connect(config.socket);
       debug('socket set to:', config.socket)
+    else if (config.mqtt_url) {
+      
+      var options = {};
+      //var topic_prefix = config.mqtt;
+      options.username = this.config.mqtt_username || null;
+      options.password = this.config.mqtt_password || null;
+      options.port     = this.config.mqtt_port     || 1883;
+    
+      if(this.config.mqtt_cert != null) {
+        options.cert = fs.readFileSync(this.config.mqtt_cert);
+      }
+      if(this.config.mqtt_key != null) {
+        options.key = fs.readFileSync(this.config.mqtt_key);
+      }
+      if(this.config.mqtt_ca != null) {
+        options.ca = fs.readFileSync(this.mqtt_config.ca);
+      }
+      
+      //options default values
+      //options.protocolId = 'MQTT'; // 'MQIsdp';
+      //options.protocolVersion = 4; // 3;
+      //options.reconnectPeriod = 5000;
+      //options.keepalive = 60;
+      //options.clean = true;
+      
+      options.clientId = this.config.mqtt_client_id || 'homebridge-ruuvitag_' + Math.random().toString(16).substr(2, 8);
+      this.log("clientId = %s", options.clientId);
+      
+      this.log("Connecting..");
+      client = mqtt.connect(this.config.mqtt_url, options);
+
+      //socket = io.connect(config.socket);
+      debug('MQTT client connected to:', config.mqtt_url)
     } else {
       ruuvi.on('found', tag => {
         tags[tag.id] = tag;
